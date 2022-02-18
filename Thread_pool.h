@@ -29,6 +29,7 @@ private:
 
     map<Task_id, Task_log> __m_task_log_map;
     pthread_mutex_t __m_mutex_task_log_map;
+    pthread_cond_t __m_cond_wait_task;
     
     map<pthread_t, Thread*> __m_run_thread_map;
     map<pthread_t, Thread*> __m_wait_thread_map;
@@ -53,7 +54,11 @@ public:
     size_t get_task_num();
     void get_task(Task* p_task, pthread_t thread_id);
     void add_task_log(Task_log* p_task, pthread_t thread_id);
+    /*失败返回-1*/
     int add_task(Thread_func func, void* arg, Task_id* p_task_id);
     void* get_result(Task_id task_id);
+
+    /*失败返回-1，说明没有该任务*/
+    int wait(Task_id task_id);
 };
 #endif

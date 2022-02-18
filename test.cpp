@@ -10,29 +10,28 @@ void* forn(void* num){
     unsigned int n = *((unsigned int*)&num);
     printf("pthread:%u run num:%u\n", pthread_self(), num);
     for(;i<n;i++){
-        //printf("pthread:%u i:%d\n", pthread_self(), i);
+        printf("pthread:%u i:%d\n", pthread_self(), i);
     }
-     printf("pthread:%u end num:%u\n", pthread_self(), num);
+    printf("pthread:%u end num:%u\n", pthread_self(), num);
     
     return NULL;
 }
 int main(int argc, char* argv[]){
+    if(argc < 3){
+        printf("usage:test threadNum forNumber\n");
+        exit(-1);
+    }
     srand(time(NULL));
     int threadNum = atoi(argv[1]);
     int i = 0;
-    Thread_pool* p_pool = Thread_pool::create_thread_pool(2, 50);
+    Thread_pool* p_pool = Thread_pool::create_thread_pool(1, threadNum);
     
-    for(;i<threadNum;i++){
-       p_pool->add_task(forn, (void*)(atoi(argv[2])*rand()),NULL);
+    Task_id task_ids[threadNum];
+    for(i = 0;i<threadNum;i++){
+       p_pool->add_task(forn, (void*)(atoi(argv[2])),task_ids + i);
     }
-    
-    char buff[1024];
-    i = 1;
-    int task = 0;
-	while(i++){ 
-        p_pool->add_task(forn, (void*)(atoi(argv[2])*rand()),NULL);
-        DEBUG_INFO("add task task num:%d\n",p_pool->get_task_num());
-        sleep(1); 
+    for(i = 0;i<threadNum;i++){
+       p_pool->wait(task_ids[i]);
     }
     printf("run thread:%d\n", p_pool->get_run_thread_num());
     printf("wait thread:%d\n", p_pool->get_wait_thread_num());

@@ -15,5 +15,6 @@ private:
 public:
     static Thread* create_thread(Thread_pool* p_master_thread_pool);
     pthread_t get_thread_id();
+    friend Thread_pool;
 };
 #endif
