@@ -13,11 +13,12 @@ const size_t Thread_pool::__get_cpu_thread_num(){
     return cpu_thread_num;
 }
 const size_t Thread_pool::__get_max_thread_num(){
-    FILE* fp = popen("ulimit -u","r");
-    size_t max_thread_num = 0;
-    fscanf(fp,"%d",&max_thread_num);
-    pclose(fp);
-    return max_thread_num;
+    // FILE* fp = popen("ulimit -u","r");
+    // size_t max_thread_num = 0;
+    // fscanf(fp,"%d",&max_thread_num);
+    // pclose(fp);
+    // return max_thread_num;
+    return __get_cpu_thread_num() * 2;
 }
 
 const size_t Thread_pool::CPU_THREAD_NUM = __get_cpu_thread_num();
@@ -165,8 +166,13 @@ void Thread_pool::__adjust_thread_num(){
     DEBUG_INFO("pthread:%u lock __m_mutex_task_queue in __adjust_thread_num\n", pthread_self());
     pthread_mutex_lock(&this->__m_mutex_thread_map);
     DEBUG_INFO("pthread:%u lock __m_mutex_thread_map in __adjust_thread_num\n", pthread_self());
-    if(this->get_task_num() > this->get_wait_thread_num() &&
-       this->get_current_thread_num() < this->__m_max_thread_num){
+    struct rusage rus;
+    getrusage(RUSAGE_SELF, &rus);
+    bool prefer_io_flag = rus.ru_nvcsw > rus.ru_nivcsw;
+    bool prefer_cpu_flag = rus.ru_nvcsw < rus.ru_nivcsw;
+    if(this->get_task_num() > this->get_wait_thread_num()
+       &&this->get_current_thread_num() < this->__m_max_thread_num
+       &&prefer_io_flag){
         //增加一个线程
         DEBUG_INFO("add thread\n");
         Thread* p_thread = Thread::create_thread(this);
@@ -175,8 +181,9 @@ void Thread_pool::__adjust_thread_num(){
             p_thread->get_thread_id(), p_thread)
             );
     }
-    else if(this->get_task_num() < this->get_wait_thread_num()&&
-            this->get_current_thread_num() > this->__m_min_thread_num){
+    else if(this->get_task_num() < this->get_wait_thread_num()
+            &&this->get_current_thread_num() > this->__m_min_thread_num
+            &&prefer_cpu_flag){
         //减少一个线程
         DEBUG_INFO("delete thread\n");
         auto iter = this->__m_wait_thread_map.begin();
